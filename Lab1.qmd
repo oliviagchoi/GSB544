@@ -1,0 +1,285 @@
+---
+title: Lab 1
+jupyter: python3
+format:
+    html:
+        embed-resources: true
+---
+
+## Task 1
+
+### 1. Identify, and list here, what aesthetics are being used and which variables are being mapped to each aesthetic.
+
+-   x-axis: Income
+
+-   y-axis: Life Expectancy
+
+-   fill: Continent (four_regions)
+
+-   bubble size: population
+
+-   Other: Outline color/stroke, watermark (annotations), grid lines
+
+### 2. Import the q1data.csv dataset.
+
+```{python}
+#2. Import the q1data.csv dataset.
+
+import pandas as pd
+
+dfq1 = pd.read_csv("q1data.csv")
+```
+
+```{python}
+dfq1
+```
+
+### 3. Recreate the plot using plotnine
+
+```{python}
+#Plotnine imports
+
+import numpy as np
+
+from plotnine import (
+    ggplot,
+    aes,
+    geom_point,
+    scale_x_continuous,
+    scale_y_continuous,
+    labs,
+    theme,
+    scale_fill_manual,
+    scale_size,
+    annotate,
+    element_line
+)
+```
+
+```{python}
+# 3. Recreate the plot using plotnine.
+(
+    ggplot(dfq1, aes("income", "life_exp", size="population"))
+    + geom_point(aes(fill="four_regions"),
+     color="black",
+        stroke=0.3)
+    + scale_x_continuous(
+        trans='log2',
+        breaks=[500, 1000, 2000, 4000, 8000, 16000, 32000, 64000],
+        labels=["500", "1000", "2000", "4000", "8000", "16k", "32k", "64k"])
+    + scale_y_continuous(
+        limits=(20, 90),
+        breaks=range(20, 91, 10)) 
+    + labs(
+        x="Income",
+        y="Life Expectancy")
+    + theme(
+        figure_size=(11, 5),
+        panel_grid_major=element_line(color="grey", size=0.7, alpha=.5),
+        panel_grid_minor=None)    
+    + scale_fill_manual(values=["#59CCE1", "#94DF45","#E36172","#F2E04A"])
+    + scale_size(range=(.5, 23))
+    + annotate("text", x=8000, y=50, label="2010", size=150, color="grey", alpha=.20)
+    + annotate("text", x=500, y=89, label="years", size=10, color="grey", alpha=.80, angle=90)
+    + annotate("text", x=40000, y=20, label="per person(GDP/capita, PPPS inflation-adjusted)", size=10, color="grey", alpha=.80)
+    + annotate("text", x=1200, y=90, label="INCOME LEVEL 1", size=10, color="grey", alpha=.80)
+    + annotate("text", x=4900, y=90, label="LEVEL 2", size=10, color="grey", alpha=.80)
+    + annotate("text", x=13000, y=90, label="LEVEL 3", size=10, color="grey", alpha=.80)
+    + annotate("text", x=45000, y=90, label="LEVEL 4", size=10, color="grey", alpha=.80)
+    + annotate("text", x=2700, y=90, label="\u2666", size=10, color="grey", alpha=.80)
+    + annotate("text", x=8000, y=90, label="\u2666", size=10, color="grey", alpha=.80)
+    + annotate("text", x=25000, y=90, label="\u2666", size=10, color="grey", alpha=.80)
+)
+```
+
+### 4. What other geometries could you use here besides geom_point? Provide an actual plot of another geometry being used here and why it’s good or bad for visualizing these data.
+
+-   We could use a geom_text which essentially replaces the bubbles with the country names
+
+-   It shows all 3 variables and identifies the countries as well, but it is unreadable/messy because there's overlap of the country names
+
+```{python}
+from plotnine import ggplot, aes, geom_text, scale_size, theme, labs
+
+(
+    ggplot(dfq1, aes(x='income', y='life_exp', label='country'))
+    + geom_text(aes(size='population', color='four_regions'), alpha=0.6)
+    + scale_size(range=(3, 12))
+    + labs(x="Income", y="Life Expectancy", size="Population")
+    + theme(figure_size=(11, 6))
+)
+```
+
+## Task 2
+
+### 1. Identify, and list here, what aesthetics are being used and which variables are being mapped to each aesthetic.
+
+-   x-axis: Exports (% of GDP)
+
+-   y-axis: Imports (% of GDP)
+
+-   fill: Continent (four_regions)
+
+-   bubble size: Energy
+
+-   Other: Outline color/stroke, watermark (annotations), grid lines
+
+### 2. Import the q2data.csv dataset.
+
+```{python}
+# Import the q2data.csv dataset.
+
+import pandas as pd
+
+dfq2 = pd.read_csv("q2data.csv")
+```
+
+```{python}
+dfq2
+```
+
+```{python}
+print(dfq2.dtypes)
+```
+
+```{python}
+dfq2['exports'] = pd.to_numeric(dfq2['exports'], errors='coerce')
+dfq2['imports'] = pd.to_numeric(dfq2['imports'], errors='coerce')
+dfq2['energy'] = pd.to_numeric(dfq2['energy'], errors='coerce')
+```
+
+### 3. Recreate the plot as best you can using plotnine.
+
+```{python}
+(
+    ggplot(dfq2, aes('exports', 'imports', size='energy'))
+    + geom_point(
+        aes(fill="four_regions"),
+        color="black",
+        stroke=0.3
+    )
+    + scale_x_continuous(
+        limits=(0, 220),
+        breaks=range(0, 241, 20),
+        labels=[str(x) for x in range(0, 241, 20)]
+    )
+    + scale_y_continuous(
+        limits=(0, 400),
+        breaks=range(0, 401, 50)
+    )
+    + labs(
+        x="Exports (\% of GDP)",
+        y="Imports (% of GDP)"
+    )
+    + theme(
+        figure_size=(11, 5),
+        panel_grid_major=element_line(color="grey", size=0.7, alpha=.5),
+        panel_grid_minor=None
+    )
+    + scale_fill_manual(values=["#59CCE1", "#94DF45", "#E36172", "#F2E04A"])
+    + scale_size(range=(.5, 20))
+    # big watermark
+    + annotate("text", x=110, y=175, label="1997", size=150, color="grey", alpha=.20)
+    # axis sub-labels
+    + annotate("text", x=-5, y=390, label="(% of GDP)", size=9, color="grey", alpha=.8, angle=90)
+    + annotate("text", x=200, y=-15, label="(% of GDP)", size=9, color="grey", alpha=.8)
+)
+```
+
+### 4. What other geometries could you use here besides geom_point? Provide an actual plot of another geometry being used here and why it’s good or bad for visualizing these data.
+
+-   We could use a geom_density_2d which shows where countries cluster in the exports and imports with contours weighted by energy use (so large users influence the density more)
+
+-   It highlights patterns/clusters across regions but we lose individual country information (the bubbles); the size is no longer visible
+
+```{python}
+from plotnine import ggplot, aes, geom_density_2d, theme, labs
+
+(
+    ggplot(dfq2, aes(x='exports', y='imports', weight='energy'))
+    + geom_density_2d(aes(color='four_regions'))
+    + labs(x="Exports (% of GDP)", y="Imports (% of GDP)", color="Region")
+    + theme(figure_size=(11, 6))
+)
+```
+
+## Task 3
+
+### 1. Identify, and list here, what aesthetics are being used and which variables are being mapped to each aesthetic.
+
+-   x-axis: internet_users (Individuals using the Internet)
+
+-   y-axis: gdp (GDP/capita)
+
+-   fill: Continent (four_regions)
+
+-   bubble size: Income
+
+-   Other: Outline color/stroke, watermark (annotations), grid lines
+
+### 2. Import the q3data.csv dataset.
+
+```{python}
+# 2. Import the q3data.csv dataset.
+
+import pandas as pd
+
+dfq3 = pd.read_csv("q3data.csv")
+```
+
+```{python}
+dfq3
+```
+
+### 3. Recreate the plot as best you can using plotnine.
+
+```{python}
+# 3. Recreate the plot as best as you can using plotnine.
+
+(
+    ggplot(dfq3, aes("internet_users", "gdp", size="income"))
+    + geom_point(aes(fill="four_regions"),
+     color="black",
+        stroke=0.3)
+    + scale_x_continuous(
+        limits=(0, 90),
+        breaks=range(0, 91, 10)) 
+    + scale_y_continuous(
+        trans='log2',
+        breaks=[200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000],
+        labels=["200", "500", "1000", "2000", "5000", "10k", "20k", "50k", "100k"])
+    + labs(
+        x="Individuals using the Internet",
+        y="GDP/capita")
+    + theme(
+        figure_size=(11, 5),
+        panel_grid_major=element_line(color="grey", size=0.7, alpha=.5),
+        panel_grid_minor=None)    
+    + scale_fill_manual(values=["#59CCE1", "#94DF45","#E36172","#F2E04A"])
+    + scale_size(range=(.5, 23))
+    + annotate("text", x=50, y=4000, label="2001", size=150, color="grey", alpha=.20)
+    + annotate("text", x=10, y=40000, label="US$, inflation-adjusted", size=10, color="grey", alpha=.80, angle=90)
+    + annotate("text", x=86, y=200, label="\% of population", size=10, color="grey", alpha=.80)
+)
+```
+
+### 4. What other geometries could you use here besides geom_point? Provide an actual plot of another geometry being used here and why it’s good or bad for visualizing these data.
+
+-   We could use a geom_text which essentially replaces the bubbles with the country names
+
+-   It shows all 3 variables and identifies the countries as well, but it is unreadable/messy because there's overlap of the country names. Further, this clutter will increase with the data size.
+
+```{python}
+from plotnine import ggplot, aes, geom_text, theme, labs
+
+(
+    ggplot(dfq3, aes(x='internet_users', y='gdp'))
+    + geom_text(aes(label='country', size='income', color='four_regions'), alpha=0.7)
+    + labs(
+        x="Individuals using the Internet (% of population)",
+        y="GDP/capita (US$, inflation-adjusted)",
+        size="Income"
+    )
+    + theme(figure_size=(11, 6))
+)
+```
