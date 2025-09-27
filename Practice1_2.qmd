@@ -1,0 +1,175 @@
+---
+title: 'Practice Activity: Basic Syntax'
+output: html
+jupyter: python3
+---
+
+
+## Overview
+
+In this PA, you will will be creating and manipulating basic objects to uncover a top secret message.
+
+### Hint 1
+
+As you work through this PA, you will encounter some code that does not work as you want it to.  Don't despair!  Errors (when R is unable to run your code) and bugs (when the code doesn't do what you hoped) are a natural part of coding.  Even the best of the best deal with these problems regularly - learning to track down the issue is a skill that you can learn and practice.
+
+Google is your friend!  If an error is confusing, copy it into Google and see what other people are saying.  If you don't know how to do something, search for it.
+
+### Hint 2
+
+Just because there is no error message doesn't mean everything went smoothly.  You should be regularly printing out your objects, to see they contain the information and format that you expect.
+
+For example, if you have an object named `my_thing`, you might first want to simply look at the object by typing its name.
+
+However, you might also want to make sure it is the right **object type** and/or the right **object structure**.
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+my_thing = "hello"
+type(my_thing)
+len(my_thing)
+```
+
+## Part One: Setup
+
+Each of the following code chunks will cause an error and/or do the desired task incorrectly.  Find the mistake, and correct it to complete the intended action.
+
+
+
+
+1. Create lists containing the upper case letters, lower case letters, and some punctuation marks.
+
+```{python}
+lower_case = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"]
+
+upper_case = ["A", "B", "C", "D", "E", "F", "G", "H" "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
+
+punctuation = [".", ",", "!", "?", "'", "\"", "(", ")", " ", "-", ";", ":"]
+```
+
+2. Make one long list containing all the symbols.  Find the length of this list.
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+all_symbols = lower_case + upper_case + punctuation
+
+len(all_symbols)
+```
+
+3. Repeat the previous steps, but instead of using *list* type objects, use **numpy arrays**.  Don't forget to **import** the numpy library!
+
+```{python}
+import numpy as np
+from numpy import array
+
+lower_case = np.array(["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"])
+
+upper_case = np.array(["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"])
+
+punctuation = np.array([".", ",", "!", "?", "'", "\"", "(", ")", " ", "-", ";", ":"])
+
+## Use np.concatenate to combine into long array
+all_symbols = np.concatenate((lower_case, upper_case, punctuation))
+```
+
+4. Make a **pandas data frame**, with one column called "Symbol" containing the `all_symbols` array.
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+import pandas as pd
+
+symbols_df = pd.DataFrame(all_symbols)
+
+symbols_df.rename(columns = {0: "Symbol"}, inplace=True)
+
+print(np.shape(symbols_df))
+```
+
+## Part Two: Decoding the secret message.
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+top_secret = pd.read_csv("https://www.dropbox.com/s/k72h1zewk4gtqep/PA_Secret_Code?dl=1", header=None)
+
+top_secret = top_secret[0].to_numpy()
+
+top_secret = top_secret + 14
+
+top_secret = (top_secret * 18) - 257
+
+top_secret = np.exp(top_secret)
+
+top_secret = top_secret ** 2
+
+print(np.sum(top_secret < 17))
+
+
+rows = len(top_secret) // 5
+matrix = top_secret.reshape((rows, 5), order="F")
+
+evens = np.arange(2, 383, 2)
+
+matrix[:, 0] = matrix[:, 0] - evens
+
+matrix[17:24, 2] = matrix[17:24, 2] - 100
+
+matrix[:, 3] = matrix[:, 3] * 2
+
+matrix[:, 4] = matrix[:, 4] * 2
+
+top_secret = matrix.flatten(order='F')
+
+print(np.all(top_secret[500:] < 100))
+
+
+top_secret[37:465] = np.sqrt(top_secret[37:465])
+
+top_secret = np.rint(top_secret)
+
+top_secret[top_secret == 39] = 20
+
+print(np.sum(top_secret % 2 == 0))
+
+```
+
+### Hint
+
+Recall that basic math operations are **vectorized**.  This means you don't have to repeat the process for each item in a list; you can apply the math to the whole thing at once.
+
+### Instructions
+
+By altering this top secret set of numbers, you will be able to create a message.  Write your own code to complete the steps below.
+
+1. Add 14 to every number.
+2. Multiply every number by 18, then subtract 257.
+3. Exponentiate every number.  (That is, do e^[number].  You may have to Google how to do this!)
+4. Square every number.
+
+**Checkpoint:** Headquarters has informed you that at this stage of decoding, there should be 352 numbers in the secret message that are below 17.  Write code to check if this is true for your data.
+
+
+5. Turn your one-dimensional array of numbers into a two-dimensional array (matrix) with 5 columns. This conversion should be **column-wise**; that is, the first several elements of the array should all end up in the first **column** of your matrix.
+6. Separately from your top secret numbers, create an array of all the even numbers between 1 and 382. Name it "evens". That is, "evens" should contain 2, 4, 6, 8 ..., 382.
+7. Subtract the "evens" vector from the first column of your secret message matrix.
+8. Subtract 100 from all numbers in the 18-24th rows of the 3rd column.
+9. Multiply all numbers in the 4th and 5th column by 2.
+10. Turn your matrix back into a one dimensional array. Again this should be **column-wise**, so that the first column of the matrix becomes the first elements of the array.
+
+
+**Checkpoint:** Headquarters has informed you that at this stage of decoding, all numbers in indices 500 and beyond are below 100.  Write code to check if your numbers fulfill this requirement.
+
+11. Take the square root of all numbers in indices 37 to 464.
+12. Round all numbers to the nearest whole number.
+13. Replace all instances of the number 39 with 20.
+
+**Checkpoint:** Headquarters has informed you that your final message should have 344 even numbers.  Write code to check if your numbers fulfill this requirement.
+
+## Part 3: The secret message!
+
+Run the following to discover the final message!  Google the first line of this message, if you do not recognize it, to see what it is.
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 128}
+''.join(map(str, symbols_df.loc[top_secret-1]['Symbol']))
+```
+
