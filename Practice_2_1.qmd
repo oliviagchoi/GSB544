@@ -1,0 +1,114 @@
+---
+title: Titanic Wrangling
+jupyter: python3
+---
+
+
+In this practice activity you'll continue to work with the titanic dataset in ways that flex what you've learned about both data wrangling and data visualization.
+
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+# Import the titanic dataset here
+
+import pandas as pd
+data_dir = "https://dlsun.github.io/pods/data/"
+df_titanic = pd.read_csv(data_dir + "titanic.csv")
+df_titanic['class'].unique()
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 206}
+df_titanic.head()
+```
+
+## 1. Filter the data to include passengers only. Calculate the joint distribution (cross-tab) between a passenger's class and where they embarked.
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 424}
+df_titanic["type"] = df_titanic["class"].map({
+    "1st": "passenger",
+    "2nd": "passenger",
+    "3rd": "passenger",
+    "victualling crew": "crew",
+    "engineering crew": "crew",
+    "deck crew": "crew"
+})
+
+df_titanic
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 175}
+# Code here
+
+passengers = df_titanic[df_titanic['type'] == 'passenger']
+
+cross_tab = pd.crosstab(passengers['class'], passengers['embarked']) #joint distribution
+
+cross_tab
+```
+
+## 2. Using the joint distribution that calculated above, calculate the following:
+
+* the conditional distribution of their class given where they embarked
+* the conditional distribution of where they embarked given their class
+
+Use the conditional distributions that you calculate to answer the following quesitons:
+
+* What proportion of 3rd class passengers embarked at Southampton?
+* What proportion of Southampton passengers were in 3rd class?
+
+```{python}
+# Code here
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 175}
+pd.crosstab(passengers['class'], passengers['embarked'], normalize=True) #class given embarked
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 206}
+pd.crosstab(passengers['embarked'], passengers['class'], normalize=True) #embarked given class
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+pd.crosstab(passengers['class'], passengers['embarked'], normalize='index').loc['3rd', 'S'] #proportion of 3rd class embarked at Southampton, label-based indexing
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+pd.crosstab(passengers['class'], passengers['embarked'], normalize='columns').loc['3rd', 'S'] #proportion of Southamption in 3rd class, label-based indexing
+```
+
+## 3. Make a visualization showing the distribution of a passenger's class, given where they embarked.
+
+Discuss the pros and cons of using this visualization versus the distributions you calculated before, to answer the previous questions.
+
+* The barchart gives simple visualizaton showing the distribution of 1,2, or 3 class passengers at the embarkation ports
+
+* However, we lose exact numerical values that our other distributions tell us; the barchart also is proportions, not counts which can be misleading
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 484}
+# Code here; used ChatGPT for aesthetic help
+
+import matplotlib.pyplot as plt
+
+class_given_embarked = pd.crosstab(
+    passengers['class'],
+    passengers['embarked'],
+    normalize='columns'
+)
+
+class_given_embarked.T.plot(kind='bar', stacked=True, figsize=(8,5))
+
+plt.title("Distribution of Passenger Class, Given Where Embarked")
+plt.xlabel("Embarkation Port")
+plt.ylabel("Proportion")
+plt.legend(title="Class")
+plt.show()
+```
+
