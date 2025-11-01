@@ -1,0 +1,179 @@
+---
+title: Palmer Penguins Modeling
+jupyter: python3
+format:
+  html:
+    embed-resources: true
+---
+
+
+Import the Palmer Penguins dataset and print out the first few rows.
+
+Suppose we want to predict `bill_depth_mm` using the other variables in the dataset.
+
+Which variables would we need to **dummify**?
+
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+# Code Here
+!pip install palmerpenguins
+from palmerpenguins import load_penguins
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import OneHotEncoder
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 206}
+penguins = load_penguins()
+penguins.head()
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 444}
+pd.get_dummies(penguins)
+```
+
+Dummify species, island, and sex
+
+Let's use `bill_length_mm` to predict `bill_depth_mm`. Prepare your data and fit the following models on the entire dataset:
+
+* Simple linear regression (e.g. straight-line) model
+* Quadratic (degree 2 polynomial) model
+* Cubic (degree 3 polynomial) model
+* Degree 10 polynomial model
+
+Make predictions for each model and plot your fitted models on the scatterplot.
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 80}
+from sklearn.linear_model import LinearRegression
+
+penguins_clean = penguins.dropna(subset=["bill_length_mm", "bill_depth_mm"])
+
+model1 = LinearRegression()
+model1.fit(
+    X=penguins_clean[["bill_length_mm"]],
+    y=penguins_clean["bill_depth_mm"]
+    )
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 468}
+X_new = pd.DataFrame()
+X_new["bill_length_mm"] = np.linspace(
+    penguins_clean["bill_length_mm"].min(),
+    penguins_clean["bill_length_mm"].max(),
+    num=1000
+)
+
+y_new_ = pd.Series(
+    model1.predict(X_new),
+    index=X_new["bill_length_mm"]
+)
+
+penguins_clean.plot.scatter(x="bill_length_mm", y="bill_depth_mm", color="teal", alpha=0.6)
+
+y_new_.plot.line(c="navy", linewidth=2)
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 579}
+penguins_clean["bill_length_mm_square"] = penguins_clean["bill_length_mm"] ** 2
+
+square_model = LinearRegression()
+square_model.fit(
+    X=penguins_clean[["bill_length_mm", "bill_length_mm_square"]],
+    y=penguins_clean["bill_depth_mm"]
+)
+
+square_model.coef_, square_model.intercept_
+
+X_new = pd.DataFrame()
+X_new["bill_length_mm"] = np.linspace(
+    penguins_clean["bill_length_mm"].min(),
+    penguins_clean["bill_length_mm"].max(),
+    num=1000)
+X_new["bill_length_mm_square"] = X_new["bill_length_mm"] ** 2
+
+y_new_ = pd.Series(
+    square_model.predict(X_new),
+    index=X_new["bill_length_mm"])
+
+penguins_clean.plot.scatter(x="bill_length_mm", y="bill_depth_mm", color="teal", alpha=0.6)
+y_new_.plot.line(c="navy")
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 689}
+penguins_clean["bill_length_mm_square"] = penguins_clean["bill_length_mm"] ** 2
+penguins_clean["bill_length_mm_cube"] = penguins_clean["bill_length_mm"] ** 3
+
+cubic_model = LinearRegression()
+cubic_model.fit(
+    X=penguins_clean[["bill_length_mm", "bill_length_mm_square", "bill_length_mm_cube"]],
+    y=penguins_clean["bill_depth_mm"]
+)
+
+cubic_model.coef_, cubic_model.intercept_
+
+X_new = pd.DataFrame()
+X_new["bill_length_mm"] = np.linspace(
+    penguins_clean["bill_length_mm"].min(),
+    penguins_clean["bill_length_mm"].max(),
+    num=1000)
+X_new["bill_length_mm_square"] = X_new["bill_length_mm"] ** 2
+X_new["bill_length_mm_cube"] = X_new["bill_length_mm"] ** 3
+y_new_ = pd.Series(
+    cubic_model.predict(X_new),
+    index=X_new["bill_length_mm"])
+
+penguins_clean.plot.scatter(x="bill_length_mm", y="bill_depth_mm", color="teal", alpha=0.6)
+y_new_.plot.line(c="navy")
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 579}
+for i in range(2, 11):
+    penguins_clean[f"bill_length_mm_pow{i}"] = penguins_clean["bill_length_mm"] ** i
+
+deg10_model = LinearRegression()
+deg10_model.fit(
+    X=penguins_clean[[f"bill_length_mm_pow{i}" for i in range(1, 11)]]
+      if "bill_length_mm_pow1" in penguins_clean.columns
+      else penguins_clean[["bill_length_mm"] + [f"bill_length_mm_pow{i}" for i in range(2, 11)]],
+    y=penguins_clean["bill_depth_mm"])
+
+deg10_model.coef_, deg10_model.intercept_
+
+X_new = pd.DataFrame()
+X_new["bill_length_mm"] = np.linspace(
+    penguins_clean["bill_length_mm"].min(),
+    penguins_clean["bill_length_mm"].max(),
+    num=1000
+)
+for i in range(2, 11):
+    X_new[f"bill_length_mm_pow{i}"] = X_new["bill_length_mm"] ** i
+
+y_new_ = pd.Series(
+    deg10_model.predict(
+        X_new[[f"bill_length_mm_pow{i}" for i in range(1, 11)]]
+        if "bill_length_mm_pow1" in X_new.columns
+        else X_new[["bill_length_mm"] + [f"bill_length_mm_pow{i}" for i in range(2, 11)]]
+    ),
+    index=X_new["bill_length_mm"]
+)
+
+penguins_clean.plot.scatter(x="bill_length_mm", y="bill_depth_mm", color="teal", alpha=0.6)
+y_new_.plot.line(c="navy")
+```
+
+* Are any of the models above underfitting the data? If so, which ones and how can you tell?
+* Are any of thhe models above overfitting the data? If so, which ones and how can you tell?
+* Which of the above models do you think fits the data best and why?
+
+* The simple linear regression model underfits the data (doesn't follow the curve)
+* The cubic and degree 10 models overfit the data (too sharp)
+* The quadratic model captures it the best (follows the trend most closely)
+
