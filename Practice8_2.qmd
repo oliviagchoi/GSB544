@@ -1,0 +1,151 @@
+---
+title: Palmer Penguins Modeling
+author: Olivia Choi
+format:
+  html:
+    embed-resources: true
+---
+
+
+Import the Palmer Penguins dataset and print out the first few rows.
+
+Suppose we want to predict `species` using the other variables in the dataset.
+
+**Dummify** all variables that require this.
+
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+!pip install palmerpenguins
+import pandas as pd
+import numpy as np
+from palmerpenguins import load_penguins
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import confusion_matrix, accuracy_score
+from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score
+from sklearn.metrics import roc_curve
+
+from plotnine import *
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 206}
+penguins = load_penguins()
+penguins.head()
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 206}
+penguins = penguins.dropna()
+
+y = penguins["species"]
+X = penguins.drop(columns=["species"])
+
+cat_cols = X.select_dtypes(include="object").columns.tolist()
+num_cols = X.select_dtypes(exclude="object").columns.tolist()
+
+X = pd.get_dummies(X, columns=cat_cols, drop_first=True)
+
+X.head()
+```
+
+Let's use the other variables to predict `species`. Prepare your data and fit the following models on the entire dataset:
+
+* Two kNN models (for different values of K)
+* Two decision tree models (for different complexities of trees)
+
+Compute the following, for each of your models, on test data. Keep in mind that you may need to stratify your creation of the training and test data.
+
+* Confusion matrix
+* Overall Accuracy
+* Precision, Recall, AUC, and F1-score for each species
+
+Create one ROC plot for the species of your choice.
+
+```{python}
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y)
+
+scaler = StandardScaler()
+X_train_scaled = X_train.copy()
+X_test_scaled = X_test.copy()
+
+X_train_scaled[num_cols] = scaler.fit_transform(X_train[num_cols])
+X_test_scaled[num_cols] = scaler.transform(X_test[num_cols])
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 80}
+#KNN (3 and 7)
+knn3 = KNeighborsClassifier(n_neighbors=3)
+knn3.fit(X_train_scaled, y_train)
+
+knn7 = KNeighborsClassifier(n_neighbors=7)
+knn7.fit(X_train_scaled, y_train)
+
+#Decision Trees (3 and 6)
+tree3 = DecisionTreeClassifier(max_depth=3, random_state=42)
+tree3.fit(X_train, y_train)
+
+tree6 = DecisionTreeClassifier(max_depth=6, random_state=42)
+tree6.fit(X_train, y_train)
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+def evaluate(model, scaled): #help
+    if scaled:
+        preds = model.predict(X_test_scaled)
+        probs = model.predict_proba(X_test_scaled)
+    else:
+        preds = model.predict(X_test)
+        probs = model.predict_proba(X_test)
+
+    cm = confusion_matrix(y_test, preds)
+    acc = accuracy_score(y_test, preds)
+    prec = precision_score(y_test, preds, average=None)
+    rec = recall_score(y_test, preds, average=None)
+    f1 = f1_score(y_test, preds, average=None)
+    auc = roc_auc_score(y_test, probs, multi_class="ovr")
+
+    return cm, acc, prec, rec, f1, auc
+
+results = {
+    "KNN-3": evaluate(knn3, scaled=True),
+    "KNN-7": evaluate(knn7, scaled=True),
+    "Tree-3": evaluate(tree3, scaled=False),
+    "Tree-6": evaluate(tree6, scaled=False)
+}
+
+for name, vals in results.items():
+    cm, acc, prec, rec, f1, auc = vals
+    print(name)
+    print(cm)
+    print(acc)
+    print(prec)
+    print(rec)
+    print(f1)
+    print(auc)
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 497}
+species = "Adelie"
+model = knn3
+class_idx = list(model.classes_).index(species)
+
+probs = model.predict_proba(X_test_scaled)
+fpr, tpr, _ = roc_curve((y_test == species).astype(int), probs[:, class_idx])
+
+df_plot = pd.DataFrame({"fpr": fpr, "tpr": tpr})
+
+(ggplot(df_plot, aes(x="fpr", y="tpr"))
+    + geom_line()
+    + geom_abline(color = "teal")
+    + labs(title=f"Adelie ROC Curve")
+    + theme_minimal())
+```
+
