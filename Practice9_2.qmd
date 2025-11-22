@@ -1,0 +1,237 @@
+---
+title: Practice 9.2
+author: Olivia Choi
+format:
+  html:
+    embed-resources: true
+---
+
+
+Our dataset consists of clinical data from patients who entered the hospital complaining of chest pain ("angina") during exercise.  The information collected includes:
+
+* `age` : Age of the patient
+
+* `sex` : Sex of the patient
+
+* `cp` : Chest Pain type
+
+    + Value 0: asymptomatic
+    + Value 1: typical angina
+    + Value 2: atypical angina
+    + Value 3: non-anginal pain
+   
+    
+* `trtbps` : resting blood pressure (in mm Hg)
+
+* `chol` : cholesterol in mg/dl fetched via BMI sensor
+
+* `restecg` : resting electrocardiographic results
+
+    + Value 0: normal
+    + Value 1: having ST-T wave abnormality (T wave inversions and/or ST elevation or depression of > 0.05 mV)
+    + Value 2: showing probable or definite left ventricular hypertrophy by Estes' criteria
+
+* `thalach` : maximum heart rate achieved during exercise
+
+* `output` : the doctor's diagnosis of whether the patient is at risk for a heart attack
+    + 0 = not at risk of heart attack
+    + 1 = at risk of heart attack
+
+```{python}
+import pandas as pd
+from sklearn.pipeline import Pipeline
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import cross_val_score
+from sklearn.tree import plot_tree
+from plotnine import *
+```
+
+```{python}
+ha = pd.read_csv("https://www.dropbox.com/s/aohbr6yb9ifmc8w/heart_attack.csv?dl=1")
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 316}
+ha = pd.read_csv("https://www.dropbox.com/s/aohbr6yb9ifmc8w/heart_attack.csv?dl=1")
+ha["cp_is_3"] = (ha["cp"] == 3) * 1
+ha["cp_is_2"] = (ha["cp"] == 2) * 1
+ha["cp_is_1"] = (ha["cp"] == 1) * 1
+ha["cp_is_0"] = (ha["cp"] == 0) * 1
+
+ha["cp"] = ha["cp"].astype("str")
+print(ha["cp"].value_counts().sort_index())
+ha.head()
+```
+
+## Q1: Natural Multiclass Models
+
+Fit a multiclass KNN, Decision Tree, and LDA for the heart disease data; this time predicting the type of chest pain (categories 0 - 3) that a patient experiences.  For the decision tree, plot the fitted tree, and interpret the first couple splits.
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 177}
+X = ha[["trtbps", "chol", "age"]]
+y = ha["cp"]
+
+knn_model =Pipeline(
+    [("scale", StandardScaler()),
+    ("model", KNeighborsClassifier(n_neighbors=5))])
+
+knn_model.fit(X, y)
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+cv_scores = cross_val_score(knn_model, X, y, cv=5, scoring="accuracy")
+cv_scores.mean()
+
+cross_val_score(knn_model, X, y,cv=5, scoring="f1_macro").mean()
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+precision_cp0 = cross_val_score(knn_model, X, ha["cp_is_0"], cv=5, scoring="precision").mean()
+
+recall_cp0 = cross_val_score(knn_model, X, ha["cp_is_0"], cv=5, scoring="recall").mean()
+
+f1score_cp0 = cross_val_score(knn_model, X, ha["cp_is_0"], cv=5, scoring="f1").mean()
+
+precision_cp0, recall_cp0, f1score_cp0
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+precision_cp1 = cross_val_score(knn_model, X, ha["cp_is_1"], cv=5, scoring="precision").mean()
+
+recall_cp1 = cross_val_score(knn_model, X, ha["cp_is_1"], cv=5, scoring="recall").mean()
+
+f1score_cp1 = cross_val_score(knn_model, X, ha["cp_is_1"], cv=5, scoring="f1").mean()
+
+precision_cp1, recall_cp1, f1score_cp1
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+cross_val_score(knn_model, X, ha["cp_is_1"], cv=5, scoring="precision")
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+cross_val_score(knn_model, X, ha["cp_is_1"], cv=5, scoring="recall")
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+precision_cp2 = cross_val_score(knn_model, X, ha["cp_is_2"], cv=5, scoring="precision").mean()
+
+recall_cp2 = cross_val_score(knn_model, X, ha["cp_is_2"], cv=5, scoring="recall").mean()
+
+f1score_cp2 = cross_val_score(knn_model, X, ha["cp_is_2"], cv=5, scoring="f1").mean()
+
+precision_cp2, recall_cp2, f1score_cp2
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+precision_cp3 = cross_val_score(knn_model, X, ha["cp_is_3"], cv=5, scoring="precision").mean()
+
+recall_cp3 = cross_val_score(knn_model, X, ha["cp_is_3"], cv=5, scoring="recall").mean()
+
+f1score_cp3 = cross_val_score(knn_model, X, ha["cp_is_3"], cv=5, scoring="f1").mean()
+
+precision_cp3, recall_cp3, f1score_cp3
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 177}
+dt_model =Pipeline(
+    [("scale", StandardScaler()),
+    ("model", DecisionTreeClassifier(max_depth=2))]
+)
+
+dt_model.fit(X, y)
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 1000}
+plot_tree(dt_model.named_steps["model"], feature_names=["trtbps", "chol", "age"], filled=True)
+```
+
+## Q2:  OvR
+
+Create a new column in the `ha` dataset called `cp_is_3`, which is equal to `1` if the `cp` variable is equal to `3` and `0` otherwise.
+
+Then, fit a Logistic Regression to predict this new target, and report the **F1 Score**.
+
+Repeat for the other three `cp` categories.  Which category was the OvR approach best at distinguishing?
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 157}
+X = ha[["trtbps", "chol", "age"]]
+y = ha["cp_is_3"]
+
+logistic_model =Pipeline(
+    [("scale", StandardScaler()),
+    ("model", LogisticRegression())])
+
+logistic_model.fit(X, y)
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+cross_val_score(logistic_model, X, y, cv=5, scoring="precision").mean()
+
+cross_val_score(logistic_model, X, y, cv=5, scoring="recall").mean()
+
+cross_val_score(logistic_model, X, y, cv=5, scoring="f1").mean()
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 157}
+X = ha[["trtbps", "chol", "age"]]
+y = ha["cp_is_0"]
+
+logistic_model =Pipeline(
+    [("scale", StandardScaler()),
+    ("model", LogisticRegression())])
+
+logistic_model.fit(X, y)
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+cross_val_score(logistic_model, X, y, cv=5, scoring="precision").mean()
+cross_val_score(logistic_model, X, y, cv=5, scoring="recall").mean()
+cross_val_score(logistic_model, X, y, cv=5, scoring="f1").mean()
+```
+
+## Q3: OvO
+
+Reduce your dataset to only the `0` and `1` types of chest pain.
+
+Then, fit a Logistic Regression to predict between the two groups, and report the **ROC-AUC**.  
+
+Repeat comparing category `0` to `2` and `3`.  Which pair was the OvO approach best at distinguishing?
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 157}
+ha_01 = ha[(ha["cp"] == "0") | (ha["cp"] == "1")]
+
+X = ha_01[["trtbps", "chol", "age"]]
+y = ha_01["cp"]
+
+
+logistic_model =Pipeline(
+    [("scale", StandardScaler()),
+    ("model", LogisticRegression())])
+
+logistic_model.fit(X, y)
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+cross_val_score(logistic_model, X, y, cv=5, scoring="roc_auc").mean()
+```
+

@@ -1,0 +1,238 @@
+---
+title: Practice 9.1
+author: Olivia Choi
+format:
+  html:
+    embed-resources: true
+---
+
+
+At this link, you will find a dataset containing information about heart disease patients: https://www.dropbox.com/scl/fi/0vrpdnq5asmeulc4gd50y/ha_1.csv?rlkey=ciisalceotl77ffqhqe3kujzv&dl=1
+
+A description of the original dataset can be found here: https://archive.ics.uci.edu/dataset/45/heart+disease (However, this dataset has been cleaned and reduced, and the people have been given fictious names.)
+
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 424}
+import pandas as pd
+import numpy as np
+from plotnine import *
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import confusion_matrix
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.svm import SVC
+from sklearn.model_selection import GridSearchCV
+
+df = pd.read_csv("https://www.dropbox.com/scl/fi/0vrpdnq5asmeulc4gd50y/ha_1.csv?rlkey=ciisalceotl77ffqhqe3kujzv&dl=1")
+df
+```
+
+```{python}
+df["age_std"] = (df["age"] - df["age"].mean()) / df["age"].std()
+df["chol_std"] = (df["chol"] - df["chol"].mean()) / df["chol"].std()
+```
+
+## 1. Logistic Regression
+
+Fit a Logistic Regression using only `age` and `chol` (cholesterol) as predictors.
+
+For a 55 year old, how high would their cholesterol need to be for the doctors to predict heart disease is present?
+
+How high for the doctors to estimate a 90% chance that heart disease is present?
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+X = df[['age', 'chol']]
+y = df['diagnosis']
+
+logistic_model = Pipeline(
+  [("standardize", StandardScaler()),
+  ("logistic", LogisticRegression())]
+)
+
+logistic_model_fitted = logistic_model.fit(X, y)
+
+logistic_model_fitted
+
+logistic_model_fitted.named_steps['logistic'].coef_, logistic_model_fitted.named_steps['logistic'].intercept_
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+logistic_age_coef = logistic_model_fitted.named_steps['logistic'].coef_[0][0]
+logistic_chol_coef = logistic_model_fitted.named_steps['logistic'].coef_[0][1]
+logistic_intercept = logistic_model_fitted.named_steps['logistic'].intercept_
+
+logistic_age_coef, logistic_chol_coef, logistic_intercept
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 497}
+(ggplot(df, aes(x="age_std", y="chol_std", color="diagnosis"))
++ geom_point()
++ geom_abline(intercept = - logistic_intercept / logistic_chol_coef, slope = - logistic_age_coef / logistic_chol_coef, color = "black"))
+```
+
+```{python}
+logistic_predictions = logistic_model.predict(X)
+logistic_probs = logistic_model.predict_proba(X)[:, 1]
+logistic_scores = logistic_intercept + logistic_age_coef * df['age_std'] + logistic_chol_coef * df['chol_std']
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 424}
+df["logistic_prediction"] = logistic_predictions
+df["logistic_prob"] = logistic_probs
+df["logistic_score"] = logistic_scores
+
+df
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 143}
+pd.crosstab(df["logistic_prediction"], df["diagnosis"])
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+confusion_matrix(y, logistic_predictions)
+```
+
+## 2. Linear Discriminant Analysis
+
+Fit an LDA model using only `age` and `chol` (cholesterol)  as predictors.
+
+For a 55 year old, how high would their cholesterol need to be for the doctors to predict heart disease is present?
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 157}
+X = df[['age', 'chol']]
+y = df['diagnosis']
+
+lda_model = Pipeline(
+  [("standardize", StandardScaler()),
+  ("lda", LinearDiscriminantAnalysis())]
+)
+
+lda_model_fitted = lda_model.fit(X, y)
+
+lda_model_fitted
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+lda_age_coef = lda_model_fitted.named_steps['lda'].coef_[0][0]
+lda_chol_coef = lda_model_fitted.named_steps['lda'].coef_[0][1]
+lda_intercept = lda_model_fitted.named_steps['lda'].intercept_
+
+lda_age_coef, lda_chol_coef, lda_intercept
+```
+
+```{python}
+lda_predictions = lda_model.predict(X)
+lda_probs = lda_model.predict_proba(X)[:, 1]
+lda_scores = lda_intercept + lda_age_coef * df['age_std'] + lda_chol_coef * df['chol_std']
+```
+
+```{python}
+df["lda_prediction"] = lda_predictions
+df["lda_prob"] = lda_probs
+df["lda_score"] = lda_scores
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 143}
+pd.crosstab(df["lda_prediction"], df["diagnosis"])
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+confusion_matrix(y, lda_predictions)
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 143}
+pd.crosstab(df["lda_prediction"], df["logistic_prediction"])
+```
+
+## 3. Support Vector Classifier
+
+Fit an SVC model using only `age` and `chol` as predictors.  Don't forget to tune the regularization parameter.
+
+For a 55 year old, how high would their cholesterol need to be for the doctors to predict heart disease is present?
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 80}
+X = df[['age', 'chol']]
+y = df['diagnosis']
+param_grid = {'svc__C': [0.01, 0.1, 1, 10, 100]}
+
+svc_pipeline = Pipeline(
+  [("standardize", StandardScaler()),
+  ("svc", SVC(kernel="linear", probability=True))]
+)
+
+svc_pipeline_grid = GridSearchCV(svc_pipeline, param_grid, cv=5)
+svc_pipeline_grid.fit(X, y)
+
+svc_pipeline_best = svc_pipeline_grid.best_estimator_
+svc_model_best = svc_pipeline_best.named_steps["svc"]
+
+svc_model_best
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+svc_age_coef  = svc_model_best.coef_[0][0]
+svc_chol_coef = svc_model_best.coef_[0][1]
+svc_intercept = svc_model_best.intercept_[0]
+
+svc_age_coef, svc_chol_coef, svc_intercept
+```
+
+```{python}
+svc_predictions = svc_pipeline_best.predict(X)
+svc_probs = svc_pipeline_best.predict_proba(X)[:, 1]
+svc_scores = svc_intercept + svc_age_coef * df['age_std'] + svc_chol_coef * df['chol_std']
+```
+
+```{python}
+df["svc_prediction"] = svc_predictions
+df["svc_prob"] = svc_probs
+df["svc_score"] = svc_scores
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 143}
+pd.crosstab(df["svc_prediction"], df["diagnosis"])
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/}
+confusion_matrix(y, svc_predictions)
+```
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 143}
+pd.crosstab(df["svc_prediction"], df["logistic_prediction"])
+```
+
+## 4. Comparing Decision Boundaries
+
+Make a scatterplot of `age` and `chol`, coloring the points by their true disease outcome.  Add a line to the plot representing the **linear separator** (aka **decision boundary**) for each of the three models above.
+
+```{python}
+#| colab: {base_uri: https://localhost:8080/, height: 497}
+(ggplot(df, aes(x="age_std", y="chol_std", color="diagnosis"))
++ geom_point()
++ geom_abline(intercept = - logistic_intercept / logistic_chol_coef, slope = - logistic_age_coef / logistic_chol_coef, color = "navy")
++ geom_abline(intercept = - lda_intercept / lda_chol_coef, slope = - lda_age_coef / lda_chol_coef, color = "navy")
++ geom_abline(intercept = - svc_intercept / svc_chol_coef, slope = - svc_age_coef / svc_chol_coef, color = "teal")
++ scale_x_continuous(breaks = np.arange(-2, 3), labels = np.round(df["age"].mean() + df["age"].std() * np.arange(-2, 3), 0))
++ scale_y_continuous(breaks = np.arange(-2, 7), labels = np.round(df["chol"].mean() + df["chol"].std() * np.arange(-2, 7), 0))
++ labs(x = "age", y = "chol")
+)
+```
+
